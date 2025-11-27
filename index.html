@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reproductor Streaming Profesional</title>
+<style>
+  /* Reset */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background-color: #000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  .player {
+    position: relative;
+    width: 350px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 3px solid #0f0;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow:
+      0 0 10px #0f0,
+      0 0 20px #0f0,
+      0 0 30px #0f0;
+    backdrop-filter: blur(10px);
+  }
+
+  .cover {
+    width: 100%;
+    border-radius: 10px;
+    border: 2px solid #0f0;
+    box-shadow:
+      0 0 8px #0f0;
+    margin-bottom: 15px;
+  }
+
+  .info {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  .station-name {
+    font-weight: bold;
+    font-size: 1.2em;
+    text-shadow: 0 0 10px #0f0;
+  }
+
+  .song-title {
+    font-size: 1em;
+    margin-top: 5px;
+    font-style: italic;
+    text-shadow: 0 0 8px #0f0;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+
+  button {
+    background: transparent;
+    border: 2px solid #0f0;
+    color: #0f0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.3s ease;
+    box-shadow: 0 0 5px #0f0;
+  }
+
+  button:hover, button:focus {
+    background: #0f0;
+    color: #000;
+    outline: none;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: #0f0;
+    box-shadow: 0 0 5px #0f0;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #000;
+    border: 2px solid #0f0;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px #0f0;
+    margin-top: -5px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #000;
+    border: 2px solid #0f0;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px #0f0;
+  }
+
+  .progress-container {
+    width: 100%;
+    height: 10px;
+    background: rgba(0, 255, 0, 0.1);
+    border-radius: 5px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    box-shadow: inset 0 0 5px #0f0;
+  }
+
+  .progress {
+    height: 100%;
+    width: 0%;
+    background: #0f0;
+    border-radius: 5px;
+    transition: width 0.1s linear;
+  }
+
+  .time {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    margin-bottom: 15px;
+    text-shadow: 0 0 5px #0f0;
+  }
+
+  .equalizer {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .eq-band {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 30%;
+  }
+
+  .eq-band label {
+    margin-bottom: 5px;
+    font-size: 0.8em;
+    text-shadow: 0 0 5px #0f0;
+  }
+
+  .eq-band input[type="range"] {
+    height: 100px;
+    width: 6px;
+    writing-mode: bt-lr; /* vertical slider */
+    -webkit-appearance: slider-vertical;
+    background: transparent;
+    box-shadow: none;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="player" role="region" aria-label="Reproductor de streaming">
+  <img src="https://i.imgur.com/ZXBtVw7.jpg" alt="Carátula de la emisora" class="cover" id="cover" />
+  <div class="info">
+    <div class="station-name" id="stationName">Radio Verde FM</div>
+    <div class="song-title" id="songTitle">Cargando...</div>
+  </div>
+
+  <div class="progress-container" id="progressContainer" aria-label="Barra de progreso">
+    <div class="progress" id="progress"></div>
+  </div>
+  <div class="time">
+    <span id="currentTime">0:00</span>
+    <span id="duration">--:--</span>
+  </div>
+
+  <div class="controls">
+    <button id="playPause" aria-label="Reproducir/Pausar">&#9658;</button>
+    <button id="mute" aria-label="Silenciar/Activar sonido">🔊</button>
+    <input type="range" id="volume" min="0" max="1" step="0.01" aria-label="Control de volumen" value="0.5" />
+  </div>
+
+  <div class="equalizer" aria-label="Ecualizador">
+    <div class="eq-band">
+      <label for="bass">Bajos</label>
+      <input type="range" id="bass" min="-15" max="15" value="0" step="1" />
+    </div>
+    <div class="eq-band">
+      <label for="mid">Medios</label>
+      <input type="range" id="mid" min="-15" max="15" value="0" step="1" />
+    </div>
+    <div class="eq-band">
+      <label for="treble">Agudos</label>
+      <input type="range" id="treble" min="-15" max="15" value="0" step="1" />
+    </div>
+  </div>
+</div>
+
+<script>
+  // URL del stream (puedes cambiarlo a la emisora que quieras)
+  const streamUrl = "https://stream.zeno.fm/ctv5k5brgpfvv";
+
+  // Simulación de metadata (en emisoras reales habría que usar WebSocket o ICY metadata)
+  const songs = [
+    { title: "Primer tema de prueba" },
+    { title: "Segundo tema de prueba" },
+    { title: "Tercer tema de prueba" },
+    { title: "Cuarto tema de prueba" }
+  ];
+
+  let currentSongIndex = 0;
+
+  // Elementos DOM
+  const playPauseBtn = document.getElementById("playPause");
+  const muteBtn = document.getElementById("mute");
+  const volumeSlider = document.getElementById("volume");
+  const progress =
+  document.getElementById("progress");
+  const progressContainer = document.getElementById("progressContainer");
+  const currentTimeEl = document.getElementById("currentTime");
+  const durationEl = document.getElementById("duration");
+  const songTitleEl = document.getElementById("songTitle");
+  const coverImg = document.getElementById("cover");
+
+  const bassSlider = document.getElementById("bass");
+  const midSlider = document.getElementById("mid");
+  const trebleSlider = document.getElementById("treble");
+
+  // Crear Audio y Web Audio API context
+  const audio = new Audio();
+  audio.crossOrigin = "anonymous"; // Para evitar problemas CORS en filtros Web Audio
+  audio.src = streamUrl;
+  audio.preload = "none";
+  audio.volume = 0.5;
+  audio.autoplay = false;
+
+  // Web Audio API setup
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const sourceNode = audioCtx.createMediaElementSource(audio);
+
+  // Filtros ecualizador
+  const bassFilter = audioCtx.createBiquadFilter();
+  bassFilter.type = "lowshelf";
+  bassFilter.frequency.value = 200;
+
+  const midFilter = audioCtx.createBiquadFilter();
+  midFilter.type = "peaking";
+  midFilter.frequency.value = 1000;
+  midFilter.Q.value = 1;
+
+  const trebleFilter = audioCtx.createBiquadFilter();
+  trebleFilter.type = "highshelf";
+  trebleFilter.frequency.value = 3000;
+
+  // Conexion de filtros en cadena
+  sourceNode.connect(bassFilter);
+  bassFilter.connect(midFilter);
+  midFilter.connect(trebleFilter);
+  trebleFilter.connect(audioCtx.destination);
+
+  // Funciones auxiliares para formato tiempo
+  function formatTime(seconds) {
+    if (isNaN(seconds)) return "--:--";
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
+  }
+
+  // Actualizar barra de progreso
+  function updateProgress() {
+    if (audio.duration) {
+      const percent = (audio.currentTime / audio.duration) * 100;
+      progress.style.width = `${percent}%`;
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+      durationEl.textContent = formatTime(audio.duration);
+    } else {
+      progress.style.width = "0%";
+      currentTimeEl.textContent = "0:00";
+      durationEl.textContent = "--:--";
+    }
+  }
+
+  // Cambiar canción simulada (solo cambia título)
+  function updateSongTitle() {
+    songTitleEl.textContent = songs[currentSongIndex].title;
+  }
+
+  // Cambiar botón play/pause
+  function updatePlayPauseIcon() {
+    if (audio.paused) {
+      playPauseBtn.innerHTML = "&#9658;"; // ►
+      playPauseBtn.setAttribute("aria-label", "Reproducir");
+    } else {
+      playPauseBtn.innerHTML = "&#10073;&#10073;"; // ‖
+      playPauseBtn.setAttribute("aria-label", "Pausar");
+    }
+  }
+
+  // Play/Pause toggle
+  playPauseBtn.addEventListener("click", () => {
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    if (audio.paused) {
+      audio.play().catch(e => console.log("Error al reproducir:", e));
+      updatePlayPauseIcon();
+    } else {
+      audio.pause();
+      updatePlayPauseIcon();
+    }
+  });
+
+  // Volumen
+  volumeSlider.addEventListener("input", () => {
+    audio.volume = volumeSlider.value;
+    if (audio.volume === 0) {
+      muteBtn.textContent = "🔈";
+      muteBtn.setAttribute("aria-label", "Activar sonido");
+    } else {
+      muteBtn.textContent = "🔊";
+      muteBtn.setAttribute("aria-label", "Silenciar");
+    }
+  });
+
+  // Mute toggle
+  muteBtn.addEventListener("click", () => {
+    audio.muted = !audio.muted;
+    if (audio.muted) {
+      muteBtn.textContent = "🔈";
+      muteBtn.setAttribute("aria-label", "Activar sonido");
+      volumeSlider.value = 0;
+    } else {
+      muteBtn.textContent = "🔊";
+      muteBtn.setAttribute("aria-label", "Silenciar");
+      volumeSlider.value = audio.volume;
+    }
+  });
+
+  // Actualizar progreso al reproducir
+  audio.addEventListener("timeupdate", updateProgress);
+
+  // Al cargar metadata
+  audio.addEventListener("loadedmetadata", () => {
+    durationEl.textContent = formatTime(audio.duration);
+  });
+
+  // Al finalizar la canción (simulación: cambiar título)
+  audio.addEventListener("ended", () => {
+    currentSongIndex = (currentSongIndex + 1) % songs.length;
+    updateSongTitle();
+    audio.play();
+  });
+
+  // Barra de progreso click (seek)
+  progressContainer.addEventListener("click", e => {
+    const rect = progressContainer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const percentage = clickX / width;
+    if (!isNaN(audio.duration)) {
+      audio.currentTime = audio.duration * percentage;
+    }
+  });
+
+  // Ecualizador - actualizar filtros
+  bassSlider.addEventListener("input", () => {
+    bassFilter.gain.value = bassSlider.value;
+  });
+
+  midSlider.addEventListener("input", () => {
+    midFilter.gain.value = midSlider.value;
+  });
+
+  trebleSlider.addEventListener("input", () => {
+    trebleFilter.gain.value = trebleSlider.value;
+  });
+
+  // Inicialización
+  updateSongTitle();
+  updatePlayPauseIcon();
+
+  // Para que audio se pueda reproducir en móviles (necesita interacción)
+  document.body.addEventListener('click', () => {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }, { once: true });
+</script>
+
+</body>
+</html>
